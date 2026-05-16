@@ -1,0 +1,16 @@
+# 秘密情報（必ず除外）
+.env
+.env.*
+
+# 仮想環境
+venv/
+.venv/
+
+# Python キャッシュ
+__pycache__/
+*.py[cod]
+
+# IDE（任意）
+.cursor/
+.idea/
+.vscode/
