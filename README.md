@@ -1,13 +1,19 @@
 # LINE 秘書ボット
 
-LINE 公式アカウント上で動く AI 秘書ボット。Claude API を使い、クライアントへの返信案生成・会話の要約を自動で行います。
+LINE 公式アカウント上で動く AI 秘書ボット。受け取ったメッセージに対して返信案を自動生成し、GAS 経由で LINE 会話履歴・Gmail を取得して状況把握をサポートします。
+
+![demo](../../demo_gif/output/linebot_demo.gif)
+
+---
 
 ## 機能
 
-- **返信案生成** — 受け取ったメッセージに対し、登録済みクライアント情報を踏まえた返信案を Claude が生成。修正指示にも会話履歴を踏まえて対応
-- **まとめモード** — 「まとめ」と送信すると、直近の LINE 会話ログとメール一覧を AI が要約してレポート
-- **会話メモリ** — ユーザーごとに直近の会話を保持し、TTL による自動失効を実装
-- **GAS 連携** — Google Apps Script 経由で LINE 会話ログと Gmail 一覧を取得し、コンテキストとして Claude に渡す
+| 機能 | 説明 |
+|------|------|
+| **返信案生成** | 受け取ったメッセージにクライアント情報を踏まえた返信案を Claude が生成。修正指示も会話履歴を踏まえて対応 |
+| **まとめモード** | 「まとめ」と送信すると LINE 会話ログ・Gmail 一覧を AI が要約してレポート |
+| **会話メモリ** | ユーザーごとに直近の会話を保持し、TTL による自動失効を実装 |
+| **GAS 連携** | Google Apps Script 経由で LINE 会話ログと Gmail 一覧を取得しコンテキストとして利用 |
 
 ## アーキテクチャ
 
@@ -22,28 +28,31 @@ LINE → Webhook → FastAPI → Claude API → push_message → LINE
 
 | カテゴリ | 採用技術 |
 |---------|---------|
-| バックエンド | Python / FastAPI / uvicorn |
-| AI | Anthropic API（claude-sonnet） |
-| メッセージング | LINE Messaging API（line-bot-sdk） |
-| 外部連携 | GAS Web App（LINE ログ・Gmail 取得） |
-| 非同期処理 | asyncio / BackgroundTasks |
+| バックエンド | Python 3.11 / FastAPI / uvicorn |
+| AI | Anthropic API（Claude Sonnet） |
+| メッセージング | LINE Messaging API（line-bot-sdk v3） |
+| 外部連携 | Google Apps Script（LINE ログ・Gmail 取得） |
+| 非同期処理 | asyncio / FastAPI BackgroundTasks |
 
 ## セットアップ
 
 ```bash
 python -m venv venv
 venv\Scripts\activate   # Windows
+# source venv/bin/activate  # Mac/Linux
 pip install -r requirements.txt
 ```
 
-`.env` に以下を設定：
+`.env` ファイルを作成して以下を設定：
 
-```
-LINE_CHANNEL_SECRET=...
-LINE_CHANNEL_ACCESS_TOKEN=...
-ANTHROPIC_API_KEY=...
-GAS_LINE_LOG_WEB_APP_URL=...   # 任意：LINE ログ取得用 GAS URL
-GAS_GMAIL_WEB_APP_URL=...      # 任意：Gmail 一覧取得用 GAS URL
+```env
+LINE_CHANNEL_SECRET=your_channel_secret
+LINE_CHANNEL_ACCESS_TOKEN=your_access_token
+ANTHROPIC_API_KEY=your_anthropic_api_key
+
+# 任意：GAS 連携を使う場合
+GAS_LINE_LOG_WEB_APP_URL=https://script.google.com/...
+GAS_GMAIL_WEB_APP_URL=https://script.google.com/...
 ```
 
 ## 起動
@@ -51,3 +60,20 @@ GAS_GMAIL_WEB_APP_URL=...      # 任意：Gmail 一覧取得用 GAS URL
 ```bash
 uvicorn main:app --reload
 ```
+
+LINE Developers の Webhook URL に `https://<your-domain>/callback` を設定してください。
+
+## 環境変数一覧
+
+| 変数名 | 必須 | 説明 |
+|--------|------|------|
+| `LINE_CHANNEL_SECRET` | ✅ | LINE チャネルシークレット |
+| `LINE_CHANNEL_ACCESS_TOKEN` | ✅ | LINE チャネルアクセストークン |
+| `ANTHROPIC_API_KEY` | ✅ | Anthropic API キー |
+| `GAS_LINE_LOG_WEB_APP_URL` | - | LINE 会話ログ取得 GAS URL |
+| `GAS_LINE_LOG_DAYS` | - | LINE ログ取得日数（デフォルト: 3） |
+| `GAS_GMAIL_WEB_APP_URL` | - | Gmail 一覧取得 GAS URL |
+| `GAS_GMAIL_DAYS` | - | メール取得日数（デフォルト: 3） |
+| `GAS_GMAIL_MAX` | - | メール最大取得件数（デフォルト: 50） |
+| `MEMORY_MAX_TURNS` | - | 会話メモリ保持ターン数（デフォルト: 5） |
+| `MEMORY_TTL_SECONDS` | - | 会話メモリ失効時間（デフォルト: 3600秒） |
